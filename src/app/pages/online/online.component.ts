@@ -97,6 +97,7 @@ export class OnlineComponent implements OnDestroy {
         alert(`✅ You successfully accepted incident ${data.incidentId}`);
         this.showIncidentPopup = false;
       });
+      
 
       // 🔁 Update count if other responders accept
       this.socket.on('incidentUpdated', (data) => {
@@ -159,9 +160,11 @@ export class OnlineComponent implements OnDestroy {
 
   // Accept only if slots are available
   acceptIncident() {
+
     if (!this.incomingIncident) return;
 
     const { responderCount, maxResponders } = this.incomingIncident;
+
     if (responderCount >= maxResponders) {
       alert('All responder slots are filled.');
       this.showIncidentPopup = false;
