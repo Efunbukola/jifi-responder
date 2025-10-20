@@ -2,6 +2,7 @@ import { Component, OnDestroy } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Geolocation } from '@capacitor/geolocation';
 import { environment } from '../../../environments/environment';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-online',
@@ -22,7 +23,7 @@ export class OnlineComponent implements OnDestroy {
   showIncidentPopup = false;
   incomingIncident: any = null;
 
-  constructor() {}
+  constructor(private router: Router) {}
 
   ngOnDestroy() {
     if (this.socket) this.socket.disconnect();
@@ -94,8 +95,10 @@ export class OnlineComponent implements OnDestroy {
 
       // 🟢 When you accept successfully
       this.socket.on('incidentAccepted', (data) => {
-        alert(`✅ You successfully accepted incident ${data.incidentId}`);
+        console.log(`✅ You successfully accepted incident ${data.incidentId}`);
         this.showIncidentPopup = false;
+        this.router.navigate(['/incident', data.incidentId]);
+
       });
       
 
@@ -163,6 +166,8 @@ export class OnlineComponent implements OnDestroy {
 
     if (!this.incomingIncident) return;
 
+    console.log('Accepting event');
+
     const { responderCount, maxResponders } = this.incomingIncident;
 
     if (responderCount >= maxResponders) {
@@ -175,6 +180,7 @@ export class OnlineComponent implements OnDestroy {
       incidentId: this.incomingIncident.incidentId || this.incomingIncident._id,
       responderId: this.responderId,
     });
+    
   }
 
   declineIncident() {

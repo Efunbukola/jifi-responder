@@ -1,0 +1,69 @@
+<div class="max-w-3xl mx-auto p-6 overflow-auto">
+  <h1 class="text-2xl font-bold mb-4 text-gray-800">Incident Details</h1>
+
+  <div *ngIf="loading" class="text-gray-600 text-center">Loading incident...</div>
+  <div *ngIf="error" class="text-red-600 text-center font-medium">{{ error }}</div>
+
+  <div *ngIf="!loading && incident" class="space-y-6">
+
+    <!-- Description -->
+    <div class="bg-gray-50 border border-gray-200 rounded-md p-4">
+      <p class="text-gray-700 text-base whitespace-pre-line">{{ incident.description }}</p>
+    </div>
+
+    <!-- Photos -->
+    <div *ngIf="incident.photos?.length" class="grid grid-cols-3 gap-3 mt-4">
+      <img
+        *ngFor="let photo of incident.photos"
+        [src]="photo"
+        (click)="openPhoto(photo)"
+        alt="Incident photo"
+        class="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:scale-105 transition"
+      />
+    </div>
+
+    <!-- Notes -->
+    <div *ngIf="incident.notes?.length" class="mt-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-2">Additional Notes</h2>
+      <div
+        *ngFor="let note of incident.notes"
+        class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm mb-2"
+      >
+        <p class="text-gray-700 text-sm">{{ note.message }}</p>
+        <p class="text-xs text-gray-400 mt-1">
+          {{ note.createdAt | date: 'short' }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Map Section -->
+    <div class="mt-8">
+      <h2 class="text-xl font-semibold text-gray-800 mb-3">Head to here:</h2>
+
+      <div class="border border-gray-200 rounded-lg shadow-md overflow-hidden h-96">
+        <google-map
+          height="100%"
+          width="100%"
+          [center]="center"
+          [zoom]="zoom"
+          [options]="{ mapTypeControl: false, streetViewControl: false, fullscreenControl: false }"
+        >
+          <map-marker
+            *ngFor="let m of markers"
+            [position]="m.position"
+            [label]="m.label"
+          ></map-marker>
+        </google-map>
+      </div>
+
+      <div class="text-center mt-6">
+        <button
+          (click)="openMaps()"
+          class="bg-green-700 hover:bg-green-800 text-white px-8 py-3 rounded-lg font-semibold shadow-md transition"
+        >
+          Take Me There
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

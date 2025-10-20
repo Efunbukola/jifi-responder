@@ -1,3 +1,4 @@
 export enum RouteNames {
-  MainBluetoothPage=''
+  Online='online',
+  Details='incident/:id'
 }

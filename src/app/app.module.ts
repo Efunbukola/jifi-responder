@@ -19,10 +19,20 @@ import { ModalComponent } from './components/modal/modal.component';
 import { SearchIPPipe } from './pipes/searchip.pipe';
 import { MainBluetoothPageComponent } from './pages/main-bluetooth-page/main-bluetooth-page.component';
 import { OnlineComponent } from './pages/online/online.component';
+import { IncidentDetailComponent } from './pages/incident-detail/incident-detail.component';
+import { MapsService } from './services/maps.service';
+import { GoogleMapsModule } from '@angular/google-maps';
+
 
 
 @NgModule({
-  declarations: [AppComponent, ContainerComponent, AlertComponent, ModalComponent, MainBluetoothPageComponent, OnlineComponent],
+  declarations: [AppComponent,
+    ContainerComponent,
+    AlertComponent,
+    ModalComponent,
+    MainBluetoothPageComponent,
+    OnlineComponent,
+  IncidentDetailComponent],
   imports: [
     AppRoutingModule,
     HttpClientModule,
@@ -31,11 +41,12 @@ import { OnlineComponent } from './pages/online/online.component';
     IonicStorageModule.forRoot(),
     ReactiveFormsModule,
     FormsModule,
+    GoogleMapsModule,
     CommonModule,
     SearchPipe
 ],
   providers: [
-    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },AlertService, SearchPipe, ModalService, SearchIPPipe],
+    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },AlertService, SearchPipe, ModalService, SearchIPPipe, MapsService],
   bootstrap: [AppComponent],
 })
 export class AppModule {}
