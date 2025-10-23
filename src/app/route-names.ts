@@ -1,4 +1,5 @@
 export enum RouteNames {
   Online='online',
-  Details='incident/:id'
+  Details='incident/:id',
+  Dashboard='d'
 }

@@ -22,6 +22,7 @@ import { OnlineComponent } from './pages/online/online.component';
 import { IncidentDetailComponent } from './pages/incident-detail/incident-detail.component';
 import { MapsService } from './services/maps.service';
 import { GoogleMapsModule } from '@angular/google-maps';
+import { DashboardComponent } from './pages/dashboard/dashboard.component';
 
 
 
@@ -32,7 +33,8 @@ import { GoogleMapsModule } from '@angular/google-maps';
     ModalComponent,
     MainBluetoothPageComponent,
     OnlineComponent,
-  IncidentDetailComponent],
+  IncidentDetailComponent,
+DashboardComponent],
   imports: [
     AppRoutingModule,
     HttpClientModule,

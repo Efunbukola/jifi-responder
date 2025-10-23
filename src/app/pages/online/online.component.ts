@@ -55,6 +55,7 @@ export class OnlineComponent implements OnDestroy {
   }
 
   async goOnline() {
+
     try {
       const pos = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
@@ -65,6 +66,11 @@ export class OnlineComponent implements OnDestroy {
         transports: ['websocket'],
         reconnection: true,
       });
+
+      
+    this.socket.onAny((event, data) => {
+      console.log('📡 [SOCKET EVENT RECEIVED]', event, data);
+    });
 
       this.socket.emit('registerResponder', {
         responderId: this.responderId,
@@ -95,7 +101,7 @@ export class OnlineComponent implements OnDestroy {
 
       // 🟢 When you accept successfully
       this.socket.on('incidentAccepted', (data) => {
-        console.log(`✅ You successfully accepted incident ${data.incidentId}`);
+        console.log(`You successfully accepted incident ${data.incidentId}`);
         this.showIncidentPopup = false;
         this.router.navigate(['/incident', data.incidentId]);
 
@@ -180,7 +186,7 @@ export class OnlineComponent implements OnDestroy {
       incidentId: this.incomingIncident.incidentId || this.incomingIncident._id,
       responderId: this.responderId,
     });
-    
+
   }
 
   declineIncident() {

@@ -1,153 +1,174 @@
-<div class="max-w-md mx-auto p-6 bg-white rounded-xl shadow mt-12 text-center relative">
-  <h1 class="text-2xl font-bold text-gray-800 mb-4">JET Responder</h1>
+<!-- Fullscreen Map Layout -->
+<div class="relative w-full h-screen overflow-hidden bg-gray-50">
 
-  <div class="flex justify-center items-center mb-6">
-    <div
-      class="w-3 h-3 rounded-full mr-2"
-      [ngClass]="online ? 'bg-green-500' : 'bg-gray-400'">
-    </div>
-    <span class="text-lg font-medium"
-      [ngClass]="online ? 'text-green-700' : 'text-gray-600'">
-      {{ online ? 'Online' : 'Offline' }}
-    </span>
-  </div>
+  <!-- Google Map -->
+  <google-map
+    height="100%"
+    width="100%"
+    [center]="location.lat ? location : { lat: 38.8951, lng: -77.0364 }"
+    [zoom]="14"
+    [options]="{ disableDefaultUI: true }"
+  >
+    <!-- Self marker -->
+    <map-marker
+      *ngIf="online && location.lat"
+      [position]="location"
+      [label]="{ text: '🚑', color: 'green', fontSize: '24px' }"
+      [title]="'You (Online)'"
+    ></map-marker>
+  </google-map>
 
-  <button
-    (click)="toggleOnline()"
-    [disabled]="loading"
-    class="w-full py-2 px-4 rounded-lg font-semibold text-white shadow transition"
-    [ngClass]="online
-      ? 'bg-red-600 hover:bg-red-700'
-      : 'bg-green-600 hover:bg-green-700'">
-    <div *ngIf="loading" class="flex items-center justify-center space-x-2">
-      <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-      </svg>
-      <span>Going online...</span>
-    </div>
-    <span *ngIf="!loading">{{ online ? 'Go Offline' : 'Go Online' }}</span>
-  </button>
-
-  <p class="mt-4 text-sm text-gray-700">{{ message }}</p>
-
-  <div *ngIf="online && location.lat" class="mt-3 text-xs text-gray-500">
-    📍 {{ location.lat | number:'1.4-4' }}, {{ location.lng | number:'1.4-4' }}
-  </div>
-
-<!-- Inside your popup container -->
-<div
-  *ngIf="showIncidentPopup"
-  class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-10"
->
-  <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-sm p-6 text-center relative">
-    <h2 class="text-lg font-semibold text-gray-800 mb-2">🚨 New Incident Alert</h2>
-
-    <p class="text-sm text-gray-600 mb-3">
-      {{ incomingIncident?.description }}
-    </p>
-
-    <!-- Progress section -->
-    <div class="bg-gray-100 rounded-lg py-2 mb-3">
-      <p class="text-sm text-gray-700">
-        👥 Responders: 
-        <b>{{ incomingIncident?.responderCount || 0 }}</b> /
-        <b>{{ incomingIncident?.maxResponders || 1 }}</b>
-      </p>
-
-      <div class="w-full h-2 bg-gray-300 rounded-full mt-1">
-        <div
-          class="h-2 rounded-full transition-all"
-          [style.width.%]="
-            ((incomingIncident?.responderCount || 0) /
-              (incomingIncident?.maxResponders || 1)) *
-            100
-          "
-          [ngClass]="
-            incomingIncident?.responderCount >= incomingIncident?.maxResponders
-              ? 'bg-red-500'
-              : 'bg-green-500'
-          "
-        ></div>
-      </div>
-      <p
-        *ngIf="
-          incomingIncident?.responderCount >= incomingIncident?.maxResponders
-        "
-        class="text-xs text-red-600 mt-1 font-medium"
+  <!-- Bottom Control Sheet -->
+  <div
+    class="absolute bottom-[80px] left-0 right-0 bg-white rounded-t-3xl shadow-xl p-6 pb-10 flex flex-col items-center text-center border-t border-gray-200 z-10"
+  >
+    <div class="flex items-center mb-3">
+      <div
+        class="w-3 h-3 rounded-full mr-2"
+        [ngClass]="online ? 'bg-green-500' : 'bg-gray-400'"
+      ></div>
+      <span
+        class="text-lg font-semibold"
+        [ngClass]="online ? 'text-green-700' : 'text-gray-700'"
       >
-        Responder limit reached. No more needed.
-      </p>
-    </div>
-
-    <!-- Photos -->
-    <div *ngIf="incomingIncident?.photos?.length" class="mb-3">
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">📸 Attached Photos</h3>
-      <div class="flex flex-wrap justify-center gap-2">
-        <img
-          *ngFor="let photo of incomingIncident.photos"
-          [src]="photo"
-          (click)="openPhoto(photo)"
-          alt="Incident photo"
-          class="w-20 h-20 object-cover rounded-md cursor-pointer hover:scale-105 transition-transform"
-        />
-      </div>
-    </div>
-
-    <!-- Location -->
-    <div *ngIf="incomingIncident?.location" class="text-sm text-gray-500 mb-3">
-      <p>
-        📍 <b>Lat:</b>
-        {{ incomingIncident.location.coordinates[1] | number: '1.5-5' }},
-        <b>Lng:</b>
-        {{ incomingIncident.location.coordinates[0] | number: '1.5-5' }}
-      </p>
-      <button
-        (click)="
-          openInMaps(
-            incomingIncident.location.coordinates[1],
-            incomingIncident.location.coordinates[0]
-          )
-        "
-        class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-      >
-        View on Map
-      </button>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="flex justify-center space-x-4 mt-4">
-      <button
-        (click)="acceptIncident()"
-        [disabled]="
-          incomingIncident?.responderCount >= incomingIncident?.maxResponders
-        "
-        [ngClass]="
-          incomingIncident?.responderCount >= incomingIncident?.maxResponders
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-green-600 hover:bg-green-700'
-        "
-        class="text-white px-4 py-2 rounded-md font-medium"
-      >
-        Accept
-      </button>
-
-      <button
-        (click)="declineIncident()"
-        class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md font-medium"
-      >
-        Decline
-      </button>
+        {{ online ? 'Online' : 'Offline' }}
+      </span>
     </div>
 
     <button
-      (click)="declineIncident()"
-      class="absolute top-2 right-3 text-gray-400 hover:text-gray-600"
+      (click)="toggleOnline()"
+      [disabled]="loading"
+      class="w-10/12 py-3 px-6 rounded-full font-semibold text-white shadow-lg transition-all"
+      [ngClass]="
+        online
+          ? 'bg-red-600 hover:bg-red-700'
+          : 'bg-green-600 hover:bg-green-700'
+      "
     >
-      ✕
+      <div *ngIf="loading" class="flex items-center justify-center space-x-2">
+        <svg
+          class="animate-spin h-5 w-5 text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8z"
+          ></path>
+        </svg>
+        <span>Processing...</span>
+      </div>
+      <span *ngIf="!loading">{{ online ? 'Go Offline' : 'Go Online' }}</span>
     </button>
+
+    <p class="mt-3 text-sm text-gray-600">{{ message }}</p>
+
+    <div *ngIf="online && location.lat" class="mt-2 text-xs text-gray-500">
+      📍 {{ location.lat | number: '1.4-4' }},
+      {{ location.lng | number: '1.4-4' }}
+    </div>
   </div>
-</div>
 
+  <!-- 🚨 Popup for Incoming Incidents -->
+  <div
+    *ngIf="showIncidentPopup"
+    class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-20"
+  >
+    <div
+      class="bg-white rounded-xl shadow-2xl w-11/12 max-w-sm p-6 text-center relative"
+    >
+      <h2 class="text-lg font-bold text-gray-800 mb-2">
+        🚨 New Incident Alert
+      </h2>
+      <p class="text-sm text-gray-600 mb-3">
+        {{ incomingIncident?.description }}
+      </p>
 
+      <div class="bg-gray-100 rounded-lg py-2 mb-3">
+        <p class="text-sm text-gray-700">
+          👥 Responders:
+          <b>{{ incomingIncident?.responderCount || 0 }}</b> /
+          <b>{{ incomingIncident?.maxResponders || 1 }}</b>
+        </p>
+        <div class="w-full h-2 bg-gray-300 rounded-full mt-1">
+          <div
+            class="h-2 rounded-full transition-all"
+            [style.width.%]="
+              ((incomingIncident?.responderCount || 0) /
+                (incomingIncident?.maxResponders || 1)) *
+              100
+            "
+            [ngClass]="
+              incomingIncident?.responderCount >=
+              incomingIncident?.maxResponders
+                ? 'bg-red-500'
+                : 'bg-green-500'
+            "
+          ></div>
+        </div>
+      </div>
+
+      <div *ngIf="incomingIncident?.photos?.length" class="mb-3">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">
+          📸 Attached Photos
+        </h3>
+        <div class="flex flex-wrap justify-center gap-2">
+          <img
+            *ngFor="let photo of incomingIncident.photos"
+            [src]="photo"
+            (click)="openPhoto(photo)"
+            class="w-20 h-20 object-cover rounded-md cursor-pointer hover:scale-105 transition-transform"
+          />
+        </div>
+      </div>
+
+      <div *ngIf="incomingIncident?.location" class="text-sm text-gray-500 mb-3">
+        📍 Lat:
+        {{ incomingIncident.location.coordinates[1] | number: '1.5-5' }},
+        Lng:
+        {{ incomingIncident.location.coordinates[0] | number: '1.5-5' }}
+      </div>
+
+      <div class="flex justify-center space-x-4 mt-4">
+        <button
+          (click)="acceptIncident()"
+          [disabled]="
+            incomingIncident?.responderCount >= incomingIncident?.maxResponders
+          "
+          [ngClass]="
+            incomingIncident?.responderCount >=
+            incomingIncident?.maxResponders
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-green-600 hover:bg-green-700'
+          "
+          class="text-white px-4 py-2 rounded-md font-medium"
+        >
+          Accept
+        </button>
+        <button
+          (click)="declineIncident()"
+          class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md font-medium"
+        >
+          Decline
+        </button>
+      </div>
+
+      <button
+        (click)="declineIncident()"
+        class="absolute top-2 right-3 text-gray-400 hover:text-gray-600"
+      >
+        ✕
+      </button>
+    </div>
+  </div>
 </div>
