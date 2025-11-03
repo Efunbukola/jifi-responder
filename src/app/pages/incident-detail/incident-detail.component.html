@@ -1,29 +1,146 @@
-<div class="max-w-3xl mx-auto p-6 overflow-auto">
-  <h1 class="text-2xl font-bold mb-4 text-gray-800">Incident Details</h1>
-
-  <div *ngIf="loading" class="text-gray-600 text-center">Loading incident...</div>
-  <div *ngIf="error" class="text-red-600 text-center font-medium">{{ error }}</div>
-
-  <div *ngIf="!loading && incident" class="space-y-6">
-
-    <!-- Description -->
-    <div class="bg-gray-50 border border-gray-200 rounded-md p-4">
-      <p class="text-gray-700 text-base whitespace-pre-line">{{ incident.description }}</p>
+<div class="flex flex-col overflow-y-scroll h-screen pb-[78px] bg-gray-50">
+  <!-- Header -->
+  <nav class="bg-white flex items-center justify-start border-b border-gray-200">
+    <div
+      class="flex items-center justify-start p-4 hover:bg-gray-100 rounded-full cursor-pointer"
+      [routerLink]="['/d/report-incident']"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        height="24px"
+        viewBox="0 -960 960 960"
+        width="24px"
+        fill="currentColor"
+      >
+        <path
+          d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"
+        />
+      </svg>
     </div>
 
-    <!-- Photos -->
-    <div *ngIf="incident.photos?.length" class="grid grid-cols-3 gap-3 mt-4">
-      <img
-        *ngFor="let photo of incident.photos"
-        [src]="photo"
-        (click)="openPhoto(photo)"
-        alt="Incident photo"
-        class="w-full h-32 object-cover rounded-lg border border-gray-300 cursor-pointer hover:scale-105 transition"
-      />
+    <div class="text-base font-bold pr-4 truncate max-w-[80%] text-gray-800">
+      Incident Details
+    </div>
+  </nav>
+
+  <div *ngIf="loading" class="text-gray-600 text-center mt-6">Loading incident...</div>
+  <div *ngIf="error" class="text-red-600 text-center font-medium mt-6">{{ error }}</div>
+
+  <div *ngIf="!loading && incident" class="space-y-8 p-6">
+    <!-- 🧾 Description Section -->
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 mb-1">
+        {{ incident.description }}
+      </h1>
+      <p class="text-sm text-gray-500">
+        Reported on {{ incident.createdAt | date: 'medium' }}
+      </p>
+
+      <div class="flex items-center gap-4 mt-2">
+        <span
+          class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded"
+        >
+          Severity: {{ incident.severity }}
+        </span>
+        <span
+          class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded"
+        >
+          Casualties: {{ incident.numberOfCasualties }}
+        </span>
+      </div>
     </div>
 
-    <!-- Notes -->
-    <div *ngIf="incident.notes?.length" class="mt-6">
+    <hr class="border-gray-200" />
+
+    <!-- 🖼 Photos Section -->
+    <div *ngIf="incident.photos?.length">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">Photos</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <img
+          *ngFor="let photo of incident.photos"
+          [src]="photo"
+          (click)="openPhoto(photo)"
+          alt="Incident photo"
+          class="w-full h-40 object-cover rounded-lg border border-gray-300 cursor-pointer hover:scale-105 hover:shadow-lg transition"
+        />
+      </div>
+    </div>
+
+    <!-- 🎥 Video Section -->
+    <div
+      *ngIf="incident.videoUrl || incident.videos?.length"
+      class="space-y-4 mt-6"
+    >
+      <h2 class="text-lg font-semibold text-gray-800 mb-3">Videos</h2>
+
+      <!-- Single video -->
+      <div *ngIf="incident.videoUrl" class="rounded-lg overflow-hidden shadow-md">
+        <video
+          [src]="incident.videoUrl"
+          controls
+          preload="metadata"
+          class="w-full max-h-[400px] rounded-lg border border-gray-300"
+        ></video>
+      </div>
+
+      <!-- Multiple videos (optional future-proofing) -->
+      <div
+        *ngIf="incident.videos?.length"
+        class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+      >
+        <video
+          *ngFor="let video of incident.videos"
+          [src]="video"
+          controls
+          preload="metadata"
+          class="w-full max-h-[400px] rounded-lg border border-gray-300"
+        ></video>
+      </div>
+    </div>
+
+    <!-- 📍 Navigation Section -->
+    <div class="space-y-4">
+      <h2 class="text-xl font-semibold text-gray-900">Navigate Here</h2>
+
+      <div
+        class="text-gray-700 bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm"
+      >
+        <p class="text-base font-medium">{{ incident.address }}</p>
+      </div>
+
+      <!-- Map -->
+      <div class="border border-gray-200 rounded-lg shadow-md overflow-hidden h-96">
+        <google-map
+          height="100%"
+          width="100%"
+          [center]="center"
+          [zoom]="zoom"
+          [options]="{
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false
+          }"
+        >
+          <map-marker
+            *ngFor="let m of markers"
+            [position]="m.position"
+            [label]="m.label"
+          ></map-marker>
+        </google-map>
+      </div>
+
+      <div class="text-center mt-4">
+        <button
+          (click)="openMaps()"
+          class="bg-green-700 hover:bg-green-800 text-white px-8 py-3 rounded-lg font-semibold shadow-md transition"
+        >
+          Open Navigation
+        </button>
+      </div>
+    </div>
+
+    <!-- 🗒 Notes Section -->
+    <div *ngIf="incident.notes?.length" class="mt-8">
       <h2 class="text-lg font-semibold text-gray-800 mb-2">Additional Notes</h2>
       <div
         *ngFor="let note of incident.notes"
@@ -36,34 +153,65 @@
       </div>
     </div>
 
-    <!-- Map Section -->
-    <div class="mt-8">
-      <h2 class="text-xl font-semibold text-gray-800 mb-3">Head to here:</h2>
 
-      <div class="border border-gray-200 rounded-lg shadow-md overflow-hidden h-96">
-        <google-map
-          height="100%"
-          width="100%"
-          [center]="center"
-          [zoom]="zoom"
-          [options]="{ mapTypeControl: false, streetViewControl: false, fullscreenControl: false }"
-        >
-          <map-marker
-            *ngFor="let m of markers"
-            [position]="m.position"
-            [label]="m.label"
-          ></map-marker>
-        </google-map>
-      </div>
 
-      <div class="text-center mt-6">
-        <button
-          (click)="openMaps()"
-          class="bg-green-700 hover:bg-green-800 text-white px-8 py-3 rounded-lg font-semibold shadow-md transition"
-        >
-          Take Me There
-        </button>
-      </div>
+    <!-- 🆘 Help Request Section -->
+<div class="mt-8">
+  <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+    Request Help
+  </h2>
+
+  <form
+    [formGroup]="helpForm"
+    (ngSubmit)="submitHelpRequest()"
+    class="space-y-4 bg-white border border-gray-200 p-4 rounded-lg shadow-sm"
+  >
+    <textarea
+      formControlName="message"
+      rows="3"
+      placeholder="Describe what kind of help you need..."
+      class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
+    ></textarea>
+
+    <button
+      type="submit"
+      [disabled]="submitting"
+      class="w-full bg-green-700 text-white font-semibold py-2 rounded-md hover:bg-green-800 transition"
+    >
+      {{ submitting ? 'Sending...' : 'Send Help Request' }}
+    </button>
+
+    <p *ngIf="message" class="text-center text-sm mt-2 font-medium"
+      [class.text-green-600]="message.includes('success')"
+      [class.text-red-600]="!message.includes('success')"
+    >
+      {{ message }}
+    </p>
+  </form>
+
+  <!-- Existing Help Requests -->
+  <div *ngIf="helpRequests?.length" class="mt-6">
+    <h3 class="text-md font-semibold text-gray-800 mb-2">Active Help Requests</h3>
+    <div
+      *ngFor="let req of helpRequests"
+      class="border border-gray-200 bg-gray-50 rounded-lg p-3 mb-2"
+    >
+      <p class="text-gray-700 text-sm">{{ req.message }}</p>
+      <p class="text-xs text-gray-400 mt-1">
+        {{ req.createdAt | date: 'short' }}
+      </p>
     </div>
   </div>
+</div>
+
+
+
+
+  </div>
+
+
+
+
+
+
 </div>

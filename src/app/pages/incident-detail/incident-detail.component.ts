@@ -5,6 +5,8 @@ import { environment } from '../../../environments/environment';
 import { Geolocation } from '@capacitor/geolocation';
 import { io, Socket } from 'socket.io-client';
 import { GoogleMap } from '@angular/google-maps';
+import { FormBuilder, Validators } from '@angular/forms';
+import { AuthService, ResponderAuthUser } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-incident-detail',
@@ -20,17 +22,28 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   loading = true;
   error = '';
   mapsUrl = '';
+  helpRequests: any[] = [];
+  submitting = false;
+  message = '';
   currentLocation: { lat: number; lng: number } | null = null;
   intervalId: any;
+  currentResponder: ResponderAuthUser | null = null;
 
-  // 🗺️ Map Config
+  // Map Config
   center: google.maps.LatLngLiteral = { lat: 0, lng: 0 };
   zoom = 16;
   markers: any[] = [];
 
+  // Help request form
+  helpForm = this.fb.group({
+    message: ['', [Validators.required, Validators.minLength(5)]],
+  });
+
   constructor(
     private route: ActivatedRoute,
-    private http: HttpClient
+    private http: HttpClient,
+    private fb: FormBuilder,
+    private auth: AuthService
   ) {}
 
   async ngOnInit() {
@@ -40,9 +53,17 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.currentResponder = this.auth.getResponder();
+    if (!this.currentResponder) {
+      this.error = 'You must be logged in to view this page.';
+      this.loading = false;
+      return;
+    }
+
     try {
       await this.fetchCurrentLocation();
       await this.loadIncident(id);
+      await this.loadHelpRequests(id);
       this.initializeMap();
       this.startHeartbeat();
     } catch (err) {
@@ -69,9 +90,49 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       .toPromise();
 
     this.incident = res;
-
     const [lng, lat] = this.incident.location.coordinates;
     this.mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+  }
+
+  async loadHelpRequests(id: string) {
+    try {
+      const res: any = await this.http
+        .get(`${environment.api_url}api/incidents/${id}/help-requests`)
+        .toPromise();
+      this.helpRequests = res;
+    } catch (err) {
+      console.error('Error fetching help requests:', err);
+    }
+  }
+
+  async submitHelpRequest() {
+    if (this.helpForm.invalid || !this.currentResponder) return;
+
+    const id = this.incident._id;
+    this.submitting = true;
+    this.message = '';
+
+    try {
+      const body = {
+        message: this.helpForm.value.message,
+        responderId: this.currentResponder.responderId,
+      };
+
+      await this.http
+        .post(`${environment.api_url}api/incidents/${id}/help-request`, body, {
+          headers: { Authorization: `Bearer ${this.currentResponder.token}` },
+        })
+        .toPromise();
+
+      this.message = 'Help request sent successfully!';
+      this.helpForm.reset();
+      await this.loadHelpRequests(id);
+    } catch (err: any) {
+      console.error('Error sending help request:', err);
+      this.message = err.error?.error || 'Failed to send help request.';
+    } finally {
+      this.submitting = false;
+    }
   }
 
   initializeMap() {
@@ -82,12 +143,14 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     this.markers = [
       {
         position: { lat, lng },
-        label: { text: '📍 Incident', className: 'font-bold text-red-700' },
+        label: { text: 'Incident', className: 'font-bold text-red-700' },
       },
     ];
   }
 
   startHeartbeat() {
+    if (!this.currentResponder) return;
+
     this.socket = io(environment.api_url, {
       transports: ['websocket'],
       reconnection: true,
@@ -102,7 +165,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
         };
 
         this.socket.emit('responderHeartbeat', {
-          responderId: '380ddd95-1bcb-43c2-8547-c74ea7850174',
+          responderId: this.currentResponder!.responderId,
           lat: this.currentLocation.lat,
           lng: this.currentLocation.lng,
         });
@@ -113,9 +176,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   }
 
   openMaps() {
-    if (this.mapsUrl) {
-      window.open(this.mapsUrl, '_system');
-    }
+    if (this.mapsUrl) window.open(this.mapsUrl, '_system');
   }
 
   openPhoto(photoUrl: string) {

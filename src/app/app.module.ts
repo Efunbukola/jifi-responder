@@ -23,6 +23,13 @@ import { IncidentDetailComponent } from './pages/incident-detail/incident-detail
 import { MapsService } from './services/maps.service';
 import { GoogleMapsModule } from '@angular/google-maps';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { AuthService } from './services/auth.service';
+import { AuthGuard } from './gaurds/auth.guard';
+import { UnauthGuard } from './gaurds/unauth.guard';
+import { LoginComponent } from './pages/login/login.component';
+import { SignupComponent } from './pages/signup/signup.component';
+import { ResponderProfileComponent } from './pages/responder-profile/responder-profile.component';
 
 
 
@@ -33,7 +40,10 @@ import { DashboardComponent } from './pages/dashboard/dashboard.component';
     ModalComponent,
     MainBluetoothPageComponent,
     OnlineComponent,
-  IncidentDetailComponent,
+    IncidentDetailComponent,
+    LoginComponent,
+    SignupComponent,
+    ResponderProfileComponent,
 DashboardComponent],
   imports: [
     AppRoutingModule,
@@ -48,7 +58,11 @@ DashboardComponent],
     SearchPipe
 ],
   providers: [
-    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },AlertService, SearchPipe, ModalService, SearchIPPipe, MapsService],
+    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    AlertService, SearchPipe, ModalService, SearchIPPipe, MapsService, AuthService,
+    AuthGuard,
+    UnauthGuard,],
   bootstrap: [AppComponent],
 })
 export class AppModule {}

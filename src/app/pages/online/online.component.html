@@ -16,6 +16,7 @@
       [label]="{ text: '🚑', color: 'green', fontSize: '24px' }"
       [title]="'You (Online)'"
     ></map-marker>
+
   </google-map>
 
   <!-- Bottom Control Sheet -->
@@ -79,38 +80,35 @@
     </div>
   </div>
 
-  <!-- 🚨 Popup for Incoming Incidents -->
+<div
+  *ngIf="showIncidentPopup && incomingIncidents.length"
+  class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-20"
+>
   <div
-    *ngIf="showIncidentPopup"
-    class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-20"
+    class="bg-white rounded-xl shadow-2xl w-11/12 max-w-sm p-6 text-center relative"
   >
-    <div
-      class="bg-white rounded-xl shadow-2xl w-11/12 max-w-sm p-6 text-center relative"
-    >
-      <h2 class="text-lg font-bold text-gray-800 mb-2">
-        🚨 New Incident Alert
-      </h2>
-      <p class="text-sm text-gray-600 mb-3">
-        {{ incomingIncident?.description }}
-      </p>
+    <h2 class="text-lg font-bold text-gray-800 mb-2">
+      🚨 Incident {{ currentIncidentIndex + 1 }} of
+      {{ incomingIncidents.length }}
+    </h2>
+
+    <ng-container *ngIf="incomingIncidents[currentIncidentIndex] as incident">
+      <p class="text-sm text-gray-600 mb-3">{{ incident.description }}</p>
 
       <div class="bg-gray-100 rounded-lg py-2 mb-3">
         <p class="text-sm text-gray-700">
           👥 Responders:
-          <b>{{ incomingIncident?.responderCount || 0 }}</b> /
-          <b>{{ incomingIncident?.maxResponders || 1 }}</b>
+          <b>{{ incident.responderCount || 0 }}</b> /
+          <b>{{ incident.maxResponders || 1 }}</b>
         </p>
         <div class="w-full h-2 bg-gray-300 rounded-full mt-1">
           <div
             class="h-2 rounded-full transition-all"
             [style.width.%]="
-              ((incomingIncident?.responderCount || 0) /
-                (incomingIncident?.maxResponders || 1)) *
-              100
+              ((incident.responderCount || 0) / (incident.maxResponders || 1)) * 100
             "
             [ngClass]="
-              incomingIncident?.responderCount >=
-              incomingIncident?.maxResponders
+              incident.responderCount >= incident.maxResponders
                 ? 'bg-red-500'
                 : 'bg-green-500'
             "
@@ -118,13 +116,11 @@
         </div>
       </div>
 
-      <div *ngIf="incomingIncident?.photos?.length" class="mb-3">
-        <h3 class="text-sm font-semibold text-gray-700 mb-2">
-          📸 Attached Photos
-        </h3>
+      <div *ngIf="incident.photos?.length" class="mb-3">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">📸 Photos</h3>
         <div class="flex flex-wrap justify-center gap-2">
           <img
-            *ngFor="let photo of incomingIncident.photos"
+            *ngFor="let photo of incident.photos"
             [src]="photo"
             (click)="openPhoto(photo)"
             class="w-20 h-20 object-cover rounded-md cursor-pointer hover:scale-105 transition-transform"
@@ -132,26 +128,15 @@
         </div>
       </div>
 
-      <div *ngIf="incomingIncident?.location" class="text-sm text-gray-500 mb-3">
-        📍 Lat:
-        {{ incomingIncident.location.coordinates[1] | number: '1.5-5' }},
-        Lng:
-        {{ incomingIncident.location.coordinates[0] | number: '1.5-5' }}
+      <div class="text-sm text-gray-500 mb-3">
+        📍 Lat: {{ incident.coordinates?.[1] | number: '1.5-5' }},
+        Lng: {{ incident.coordinates?.[0] | number: '1.5-5' }}
       </div>
 
-      <div class="flex justify-center space-x-4 mt-4">
+      <div class="flex justify-center space-x-3 mt-4">
         <button
           (click)="acceptIncident()"
-          [disabled]="
-            incomingIncident?.responderCount >= incomingIncident?.maxResponders
-          "
-          [ngClass]="
-            incomingIncident?.responderCount >=
-            incomingIncident?.maxResponders
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700'
-          "
-          class="text-white px-4 py-2 rounded-md font-medium"
+          class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium"
         >
           Accept
         </button>
@@ -162,13 +147,40 @@
           Decline
         </button>
       </div>
+    </ng-container>
 
+    <div class="flex justify-between items-center mt-4 text-gray-500 text-sm">
       <button
-        (click)="declineIncident()"
-        class="absolute top-2 right-3 text-gray-400 hover:text-gray-600"
+        (click)="previousIncident()"
+        [disabled]="incomingIncidents.length <= 1"
+        class="hover:text-gray-700"
       >
-        ✕
+        ⬅ Prev
+      </button>
+      <button
+        (click)="nextIncident()"
+        [disabled]="incomingIncidents.length <= 1"
+        class="hover:text-gray-700"
+      >
+        Next ➡
       </button>
     </div>
+
+    <button
+      (click)="declineIncident()"
+      class="absolute top-2 right-3 text-gray-400 hover:text-gray-600"
+    >
+      ✕
+    </button>
   </div>
+</div>
+
+<!-- Reconnecting Banner -->
+<div
+  *ngIf="reconnecting"
+  class="absolute top-0 left-0 right-0 bg-yellow-400 text-yellow-900 text-center py-2 font-semibold shadow-md z-30 animate-pulse"
+>
+  🔄 Reconnecting... Please wait
+</div>
+
 </div>

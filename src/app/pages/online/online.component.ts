@@ -1,8 +1,9 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Geolocation } from '@capacitor/geolocation';
 import { environment } from '../../../environments/environment';
 import { Router } from '@angular/router';
+import { AuthService, ResponderAuthUser } from '../../services/auth.service';
 
 @Component({
   selector: 'app-online',
@@ -10,8 +11,9 @@ import { Router } from '@angular/router';
   styleUrls: ['./online.component.scss'],
   standalone: false,
 })
-export class OnlineComponent implements OnDestroy {
+export class OnlineComponent implements OnInit, OnDestroy {
   online = false;
+  reconnecting = false; // 🆕 Shows “Reconnecting…” banner
   loading = false;
   message = '';
   socket!: Socket;
@@ -19,11 +21,30 @@ export class OnlineComponent implements OnDestroy {
   responderName: string | null = null;
   location = { lat: 0, lng: 0 };
 
-  // Popup state
+  // Multiple incident queue
   showIncidentPopup = false;
-  incomingIncident: any = null;
+  incomingIncidents: any[] = [];
+  currentIncidentIndex = 0;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private auth: AuthService) {}
+
+  // 🧠 Auto-restore previous session on app/component start
+  async ngOnInit() {
+    const wasOnline = localStorage.getItem('responder_online') === 'true';
+    const currentResponder: ResponderAuthUser | null = this.auth.getResponder();
+
+    if (currentResponder) {
+      this.responderId = currentResponder.responderId;
+      this.responderName =
+        currentResponder.full_name || currentResponder.username || 'Responder';
+    }
+
+    if (wasOnline && this.responderId) {
+      console.log('🔄 Restoring previous online session...');
+      this.reconnecting = true;
+      await this.goOnline(true);
+    }
+  }
 
   ngOnDestroy() {
     if (this.socket) this.socket.disconnect();
@@ -32,11 +53,19 @@ export class OnlineComponent implements OnDestroy {
   async toggleOnline() {
     this.loading = true;
     try {
-      this.responderId = '380ddd95-1bcb-43c2-8547-c74ea7850174';
-      this.responderName = 'Ade';
+      const currentResponder: ResponderAuthUser | null = this.auth.getResponder();
+      if (!currentResponder) {
+        this.message = 'Please log in first.';
+        this.loading = false;
+        return;
+      }
 
-      if (!this.responderId || !this.responderName) {
-        this.message = 'Missing responder credentials. Please register first.';
+      this.responderId = currentResponder.responderId;
+      this.responderName =
+        currentResponder.full_name || currentResponder.username || 'Responder';
+
+      if (!this.responderId) {
+        this.message = 'Missing responder ID in profile.';
         this.loading = false;
         return;
       }
@@ -44,7 +73,7 @@ export class OnlineComponent implements OnDestroy {
       if (!this.online) {
         await this.goOnline();
       } else {
-        await this.goOffline();
+        this.goOffline();
       }
     } catch (err) {
       console.error(err);
@@ -54,12 +83,9 @@ export class OnlineComponent implements OnDestroy {
     }
   }
 
-  async goOnline() {
-
+  async goOnline(autoReconnect = false) {
     try {
-      const pos = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-      });
+      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
       this.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
       this.socket = io(environment.api_url, {
@@ -67,11 +93,34 @@ export class OnlineComponent implements OnDestroy {
         reconnection: true,
       });
 
-      
-    this.socket.onAny((event, data) => {
-      console.log('📡 [SOCKET EVENT RECEIVED]', event, data);
-    });
+      // 🧭 Listen for socket lifecycle events
+      this.socket.on('connect', () => {
+        console.log('✅ Socket connected');
+        if (autoReconnect && this.reconnecting) {
+          this.message = '🟡 Reconnected to server';
+          setTimeout(() => (this.reconnecting = false), 1500);
+        }
+      });
 
+      this.socket.on('disconnect', () => {
+        console.warn('⚠️ Socket disconnected');
+        if (this.online) {
+          this.reconnecting = true;
+          this.message = 'Reconnecting to server...';
+        }
+      });
+
+      this.socket.on('reconnect_attempt', (attempt) => {
+        console.log(`🔁 Reconnection attempt ${attempt}`);
+        this.reconnecting = true;
+        this.message = 'Reconnecting to server...';
+      });
+
+      this.socket.onAny((event, data) => {
+        console.log('[SOCKET EVENT RECEIVED]', event, data);
+      });
+
+      // Register this responder with location
       this.socket.emit('registerResponder', {
         responderId: this.responderId,
         name: this.responderName,
@@ -81,70 +130,67 @@ export class OnlineComponent implements OnDestroy {
 
       this.socket.on('registeredResponder', () => {
         this.online = true;
-        this.message =
-          'You are now online and ready for incident notifications.';
+        this.reconnecting = false;
+        this.message = '🟢 You are now online and ready for incidents.';
+        localStorage.setItem('responder_online', 'true');
         console.log('[socket] registeredResponder confirmed');
       });
 
-      // 🧭 New incident
+      // 🚨 Handle incoming incidents
       this.socket.on('incidentNew', (incident) => {
         console.log('New Incident received:', incident);
         if (this.online) {
-          this.incomingIncident = {
-            ...incident,
-            responderCount: incident.responders?.length || 0,
-            maxResponders: incident.maxResponders || 1,
-          };
-          this.showIncidentPopup = true;
-        }
-      });
-
-      // 🟢 When you accept successfully
-      this.socket.on('incidentAccepted', (data) => {
-        console.log(`You successfully accepted incident ${data.incidentId}`);
-        this.showIncidentPopup = false;
-        this.router.navigate(['/incident', data.incidentId]);
-
-      });
-      
-
-      // 🔁 Update count if other responders accept
-      this.socket.on('incidentUpdated', (data) => {
-        if (
-          this.incomingIncident &&
-          this.incomingIncident.incidentId === data.incidentId
-        ) {
-          this.incomingIncident.responderCount = data.responderCount;
-          this.incomingIncident.status = data.status;
-        }
-      });
-
-      // 🚫 If another responder fills the last slot
-      this.socket.on('incidentClaimed', (data) => {
-        if (
-          this.incomingIncident &&
-          this.incomingIncident.incidentId === data.incidentId
-        ) {
-          this.showIncidentPopup = false;
-          alert(
-            '🚫 This incident has reached its responder limit and is now full.'
+          const exists = this.incomingIncidents.find(
+            (i) => i.incidentId === incident.incidentId || i._id === incident._id
           );
+          if (!exists) {
+            this.incomingIncidents.push({
+              ...incident,
+              responderCount: incident.responders?.length || 0,
+              maxResponders: incident.maxResponders || 1,
+            });
+            this.showIncidentPopup = true;
+          }
         }
+      });
+
+      this.socket.on('incidentAccepted', (data) => {
+        console.log(`✅ You accepted incident ${data.incidentId}`);
+        this.removeIncidentFromQueue(data.incidentId);
+        this.router.navigate(['/incident', data.incidentId]);
+      });
+
+      this.socket.on('incidentUpdated', (data) => {
+        const inc = this.incomingIncidents.find(
+          (i) => i.incidentId === data.incidentId
+        );
+        if (inc) {
+          inc.responderCount = data.responderCount;
+          inc.status = data.status;
+        }
+      });
+
+      this.socket.on('incidentClaimed', (data) => {
+        this.removeIncidentFromQueue(data.incidentId);
+        alert('An incident has reached maximum responders.');
       });
 
       this.startHeartbeat();
     } catch (geoErr) {
       console.error('Location error', geoErr);
       this.message = 'Unable to fetch GPS location.';
+      this.reconnecting = false;
     }
   }
 
   goOffline() {
     this.online = false;
-    this.message = 'You are now offline.';
-    if (this.socket) {
-      this.socket.disconnect();
-    }
+    this.reconnecting = false;
+    this.message = '⚫ You are now offline.';
+    if (this.socket) this.socket.disconnect();
+    this.incomingIncidents = [];
+    this.showIncidentPopup = false;
+    localStorage.setItem('responder_online', 'false');
   }
 
   async startHeartbeat() {
@@ -152,9 +198,7 @@ export class OnlineComponent implements OnDestroy {
     setInterval(async () => {
       if (!this.online || !this.socket) return;
       try {
-        const pos = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-        });
+        const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
         this.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         this.socket.emit('responderHeartbeat', {
           responderId: this.responderId,
@@ -162,36 +206,64 @@ export class OnlineComponent implements OnDestroy {
           lng: this.location.lng,
         });
       } catch (err) {
-        console.warn('Heartbeat location update failed', err);
+        console.warn('Heartbeat update failed', err);
       }
     }, HEARTBEAT_INTERVAL);
   }
 
-  // Accept only if slots are available
-  acceptIncident() {
+  nextIncident() {
+    if (this.incomingIncidents.length > 1) {
+      this.currentIncidentIndex =
+        (this.currentIncidentIndex + 1) % this.incomingIncidents.length;
+    }
+  }
 
-    if (!this.incomingIncident) return;
+  previousIncident() {
+    if (this.incomingIncidents.length > 1) {
+      this.currentIncidentIndex =
+        (this.currentIncidentIndex - 1 + this.incomingIncidents.length) %
+        this.incomingIncidents.length;
+    }
+  }
 
-    console.log('Accepting event');
-
-    const { responderCount, maxResponders } = this.incomingIncident;
-
-    if (responderCount >= maxResponders) {
-      alert('All responder slots are filled.');
+  removeIncidentFromQueue(incidentId: string) {
+    this.incomingIncidents = this.incomingIncidents.filter(
+      (i) => i.incidentId !== incidentId && i._id !== incidentId
+    );
+    if (this.incomingIncidents.length === 0) {
       this.showIncidentPopup = false;
+    } else {
+      this.currentIncidentIndex = Math.min(
+        this.currentIncidentIndex,
+        this.incomingIncidents.length - 1
+      );
+    }
+  }
+
+  acceptIncident() {
+    const current = this.incomingIncidents[this.currentIncidentIndex];
+    if (!current || !this.responderId) return;
+
+    if (
+      current.responderCount >= current.maxResponders ||
+      current.status === 'claimed'
+    ) {
+      alert('All responder slots are filled.');
+      this.removeIncidentFromQueue(current.incidentId || current._id);
       return;
     }
 
     this.socket.emit('acceptIncident', {
-      incidentId: this.incomingIncident.incidentId || this.incomingIncident._id,
+      incidentId: current.incidentId || current._id,
       responderId: this.responderId,
     });
-
   }
 
   declineIncident() {
-    this.showIncidentPopup = false;
-    this.incomingIncident = null;
+    const current = this.incomingIncidents[this.currentIncidentIndex];
+    if (current) {
+      this.removeIncidentFromQueue(current.incidentId || current._id);
+    }
   }
 
   openInMaps(lat: number, lng: number) {
@@ -203,4 +275,3 @@ export class OnlineComponent implements OnDestroy {
     window.open(photoUrl, '_system');
   }
 }
-
