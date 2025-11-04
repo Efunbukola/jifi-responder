@@ -13,7 +13,7 @@ import { AuthService, ResponderAuthUser } from '../../services/auth.service';
 })
 export class OnlineComponent implements OnInit, OnDestroy {
   online = false;
-  reconnecting = false; // 🆕 Shows “Reconnecting…” banner
+  reconnecting = false;
   loading = false;
   message = '';
   socket!: Socket;
@@ -21,14 +21,12 @@ export class OnlineComponent implements OnInit, OnDestroy {
   responderName: string | null = null;
   location = { lat: 0, lng: 0 };
 
-  // Multiple incident queue
   showIncidentPopup = false;
   incomingIncidents: any[] = [];
   currentIncidentIndex = 0;
 
   constructor(private router: Router, private auth: AuthService) {}
 
-  // 🧠 Auto-restore previous session on app/component start
   async ngOnInit() {
     const wasOnline = localStorage.getItem('responder_online') === 'true';
     const currentResponder: ResponderAuthUser | null = this.auth.getResponder();
@@ -83,8 +81,42 @@ export class OnlineComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** ✅ Ensures location permissions before calling Geolocation */
+  private async ensureLocationPermission(): Promise<boolean> {
+    try {
+      console.log('[OnlineComponent] Checking location permission...');
+      const permStatus = await Geolocation.checkPermissions();
+      console.log('[OnlineComponent] Current permission:', permStatus);
+
+      if (permStatus.location !== 'granted') {
+        const request = await Geolocation.requestPermissions();
+        console.log('[OnlineComponent] Request result:', request);
+
+        if (request.location !== 'granted') {
+          this.message = 'Location permission not granted. Please enable GPS.';
+          return false;
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[OnlineComponent] Permission error:', err);
+      this.message = 'Error checking location permission.';
+      return false;
+    }
+  }
+
   async goOnline(autoReconnect = false) {
     try {
+      // ✅ Request location permission first
+      const granted = await this.ensureLocationPermission();
+      if (!granted) {
+        console.warn('[OnlineComponent] Location permission denied.');
+        this.message = 'Unable to fetch GPS location. Please grant location access.';
+        return;
+      }
+
+      // ✅ Now safe to get position
       const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
       this.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
@@ -93,9 +125,8 @@ export class OnlineComponent implements OnInit, OnDestroy {
         reconnection: true,
       });
 
-      // 🧭 Listen for socket lifecycle events
       this.socket.on('connect', () => {
-        console.log('✅ Socket connected');
+        console.log('Socket connected');
         if (autoReconnect && this.reconnecting) {
           this.message = '🟡 Reconnected to server';
           setTimeout(() => (this.reconnecting = false), 1500);
@@ -103,7 +134,7 @@ export class OnlineComponent implements OnInit, OnDestroy {
       });
 
       this.socket.on('disconnect', () => {
-        console.warn('⚠️ Socket disconnected');
+        console.warn('Socket disconnected');
         if (this.online) {
           this.reconnecting = true;
           this.message = 'Reconnecting to server...';
@@ -111,7 +142,7 @@ export class OnlineComponent implements OnInit, OnDestroy {
       });
 
       this.socket.on('reconnect_attempt', (attempt) => {
-        console.log(`🔁 Reconnection attempt ${attempt}`);
+        console.log(`Reconnection attempt ${attempt}`);
         this.reconnecting = true;
         this.message = 'Reconnecting to server...';
       });
@@ -120,7 +151,7 @@ export class OnlineComponent implements OnInit, OnDestroy {
         console.log('[SOCKET EVENT RECEIVED]', event, data);
       });
 
-      // Register this responder with location
+      // Register this responder
       this.socket.emit('registerResponder', {
         responderId: this.responderId,
         name: this.responderName,
@@ -136,7 +167,7 @@ export class OnlineComponent implements OnInit, OnDestroy {
         console.log('[socket] registeredResponder confirmed');
       });
 
-      // 🚨 Handle incoming incidents
+      // Incoming incidents
       this.socket.on('incidentNew', (incident) => {
         console.log('New Incident received:', incident);
         if (this.online) {
@@ -155,15 +186,13 @@ export class OnlineComponent implements OnInit, OnDestroy {
       });
 
       this.socket.on('incidentAccepted', (data) => {
-        console.log(`✅ You accepted incident ${data.incidentId}`);
+        console.log(`You accepted incident ${data.incidentId}`);
         this.removeIncidentFromQueue(data.incidentId);
         this.router.navigate(['/incident', data.incidentId]);
       });
 
       this.socket.on('incidentUpdated', (data) => {
-        const inc = this.incomingIncidents.find(
-          (i) => i.incidentId === data.incidentId
-        );
+        const inc = this.incomingIncidents.find((i) => i.incidentId === data.incidentId);
         if (inc) {
           inc.responderCount = data.responderCount;
           inc.status = data.status;
@@ -197,9 +226,15 @@ export class OnlineComponent implements OnInit, OnDestroy {
     const HEARTBEAT_INTERVAL = 10000;
     setInterval(async () => {
       if (!this.online || !this.socket) return;
+
       try {
+        // ✅ Ensure permission before fetching new location
+        const granted = await this.ensureLocationPermission();
+        if (!granted) return;
+
         const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
         this.location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+
         this.socket.emit('responderHeartbeat', {
           responderId: this.responderId,
           lat: this.location.lat,

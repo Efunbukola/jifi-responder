@@ -28,6 +28,15 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   currentLocation: { lat: number; lng: number } | null = null;
   intervalId: any;
   currentResponder: ResponderAuthUser | null = null;
+  treatmentStarted = false;
+  treatmentCompleted = false;
+  treatmentNotes = '';
+  treatmentEndTime: Date | null = null;
+
+  showWorkflowModal = false;
+  workflowData: any = null;
+  selectedTask: any = null;
+  loadingWorkflow = false;
 
   // Map Config
   center: google.maps.LatLngLiteral = { lat: 0, lng: 0 };
@@ -181,5 +190,141 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
   openPhoto(photoUrl: string) {
     window.open(photoUrl, '_blank');
+  }
+
+  /** Mark arrival and load hardcoded workflow */
+  async markAsArrived() {
+    if (!this.currentResponder || !this.incident) return;
+
+    try {
+      const body = {
+        responderId: this.currentResponder.responderId,
+        incidentId: this.incident._id,
+      };
+
+      await this.http
+        .post(`${environment.api_url}api/reports/start`, body, {
+          headers: { Authorization: `Bearer ${this.currentResponder.token}` },
+        })
+        .toPromise();
+
+      this.treatmentStarted = true;
+      this.loadWorkflowData();
+
+      alert('Treatment started! Workflow loaded.');
+    } catch (err: any) {
+      console.error('Error starting treatment:', err);
+      alert('Failed to start treatment.');
+    }
+  }
+
+  /** Hardcoded workflow data */
+  loadWorkflowData() {
+    this.loadingWorkflow = true;
+
+    this.workflowData = {
+      workflow: {
+        workflow_id: 454,
+        workflow_name: 'CAMMRAD Medic Prolonged Casualty Care (PCC)',
+        workflow_description:
+          'A set of tasks for military medics to deliver prolonged casualty care in austere environments.',
+        cover_img:
+          'http://scribar.net/SCRIBAR_FILES/image_2024-08-21220330734.png',
+      },
+      tasks: [
+        {
+          task: {
+            task_id: 404,
+            task_name: 'Needle Decompression',
+            task_description:
+              'Perform the needle decompression procedure step-by-step.',
+          },
+          steps: [
+            {
+              step: { step_id: 1304, step_title: 'Clean site with antimicrobial solution.' },
+              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-2202543993.png' },
+            },
+            {
+              step: { step_id: 1314, step_title: 'Insert a 14 gauge needle at a 90° angle until a hiss of air is heard.' },
+              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-22025451596.png' },
+            },
+            {
+              step: { step_id: 1324, step_title: 'Hold the catheter in place and remove the needle.' },
+              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-22025458501.png' },
+            },
+            {
+              step: { step_id: 1334, step_title: 'Stabilize catheter hub to chest wall with ½ inch gauze tape.' },
+              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-22054105944.png' },
+            },
+            {
+              step: { step_id: 1344, step_title: 'Listen for increased breath sounds or decreased distress.' },
+              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-22025504647.png' },
+            },
+          ],
+        },
+      ],
+    };
+
+    // initialize completion status for each step
+    this.workflowData.tasks.forEach((t: any) =>
+      t.steps.forEach((s: any) => (s.completed = false))
+    );
+
+    this.loadingWorkflow = false;
+  }
+
+  /** Modal Controls */
+  openWorkflowModal() {
+    this.showWorkflowModal = true;
+  }
+
+  closeWorkflowModal() {
+    this.showWorkflowModal = false;
+    this.selectedTask = null;
+  }
+
+  selectTask(taskWrapper: any) {
+    this.selectedTask = taskWrapper;
+  }
+
+  backToTaskList() {
+    this.selectedTask = null;
+  }
+
+  toggleStepCompletion(step: any) {
+    step.completed = !step.completed;
+
+    const allCompleted = this.selectedTask.steps.every((s: any) => s.completed);
+    if (allCompleted) {
+      alert(`✅ All steps in "${this.selectedTask.task.task_name}" are complete!`);
+      this.markAsCompleted();
+      this.closeWorkflowModal();
+    }
+  }
+
+  /** Mark treatment completed */
+  async markAsCompleted() {
+    if (!this.currentResponder || !this.incident) return;
+
+    try {
+      const body = {
+        responderId: this.currentResponder.responderId,
+        incidentId: this.incident._id,
+        notes: this.treatmentNotes,
+      };
+
+      const res: any = await this.http
+        .post(`${environment.api_url}api/reports/complete`, body, {
+          headers: { Authorization: `Bearer ${this.currentResponder.token}` },
+        })
+        .toPromise();
+
+      this.treatmentCompleted = true;
+      this.treatmentEndTime = new Date(res.report.endTime);
+      alert('✅ Treatment marked as completed!');
+    } catch (err: any) {
+      console.error('Error completing treatment:', err);
+      alert('Failed to complete treatment.');
+    }
   }
 }

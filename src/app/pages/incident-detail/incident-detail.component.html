@@ -1,5 +1,5 @@
 <div class="flex flex-col overflow-y-scroll h-screen pb-[78px] bg-gray-50">
-  <!-- Header -->
+  <!-- 🔹 Header -->
   <nav class="bg-white flex items-center justify-start border-b border-gray-200">
     <div
       class="flex items-center justify-start p-4 hover:bg-gray-100 rounded-full cursor-pointer"
@@ -23,11 +23,17 @@
     </div>
   </nav>
 
-  <div *ngIf="loading" class="text-gray-600 text-center mt-6">Loading incident...</div>
-  <div *ngIf="error" class="text-red-600 text-center font-medium mt-6">{{ error }}</div>
+  <!-- 🔹 Loading / Error -->
+  <div *ngIf="loading" class="text-gray-600 text-center mt-6">
+    Loading incident...
+  </div>
+  <div *ngIf="error" class="text-red-600 text-center font-medium mt-6">
+    {{ error }}
+  </div>
 
+  <!-- 🔹 Incident Details -->
   <div *ngIf="!loading && incident" class="space-y-8 p-6">
-    <!-- 🧾 Description Section -->
+    <!-- 🧾 Description -->
     <div>
       <h1 class="text-2xl font-bold text-gray-900 mb-1">
         {{ incident.description }}
@@ -37,14 +43,10 @@
       </p>
 
       <div class="flex items-center gap-4 mt-2">
-        <span
-          class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded"
-        >
+        <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded">
           Severity: {{ incident.severity }}
         </span>
-        <span
-          class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded"
-        >
+        <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">
           Casualties: {{ incident.numberOfCasualties }}
         </span>
       </div>
@@ -52,7 +54,7 @@
 
     <hr class="border-gray-200" />
 
-    <!-- 🖼 Photos Section -->
+    <!-- 🖼 Photos -->
     <div *ngIf="incident.photos?.length">
       <h2 class="text-lg font-semibold text-gray-800 mb-3">Photos</h2>
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -66,14 +68,10 @@
       </div>
     </div>
 
-    <!-- 🎥 Video Section -->
-    <div
-      *ngIf="incident.videoUrl || incident.videos?.length"
-      class="space-y-4 mt-6"
-    >
+    <!-- 🎥 Videos -->
+    <div *ngIf="incident.videoUrl || incident.videos?.length" class="space-y-4 mt-6">
       <h2 class="text-lg font-semibold text-gray-800 mb-3">Videos</h2>
 
-      <!-- Single video -->
       <div *ngIf="incident.videoUrl" class="rounded-lg overflow-hidden shadow-md">
         <video
           [src]="incident.videoUrl"
@@ -83,11 +81,7 @@
         ></video>
       </div>
 
-      <!-- Multiple videos (optional future-proofing) -->
-      <div
-        *ngIf="incident.videos?.length"
-        class="grid grid-cols-1 sm:grid-cols-2 gap-4"
-      >
+      <div *ngIf="incident.videos?.length" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <video
           *ngFor="let video of incident.videos"
           [src]="video"
@@ -98,17 +92,14 @@
       </div>
     </div>
 
-    <!-- 📍 Navigation Section -->
+    <!-- 📍 Navigation -->
     <div class="space-y-4">
       <h2 class="text-xl font-semibold text-gray-900">Navigate Here</h2>
 
-      <div
-        class="text-gray-700 bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm"
-      >
+      <div class="text-gray-700 bg-gray-50 border border-gray-200 rounded-md p-3 shadow-sm">
         <p class="text-base font-medium">{{ incident.address }}</p>
       </div>
 
-      <!-- Map -->
       <div class="border border-gray-200 rounded-lg shadow-md overflow-hidden h-96">
         <google-map
           height="100%"
@@ -139,7 +130,7 @@
       </div>
     </div>
 
-    <!-- 🗒 Notes Section -->
+    <!-- 🗒 Notes -->
     <div *ngIf="incident.notes?.length" class="mt-8">
       <h2 class="text-lg font-semibold text-gray-800 mb-2">Additional Notes</h2>
       <div
@@ -153,65 +144,184 @@
       </div>
     </div>
 
+    <!-- 🆘 Help Request -->
+    <div class="mt-8">
+      <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+        Request Help
+      </h2>
 
+      <form
+        [formGroup]="helpForm"
+        (ngSubmit)="submitHelpRequest()"
+        class="space-y-4 bg-white border border-gray-200 p-4 rounded-lg shadow-sm"
+      >
+        <textarea
+          formControlName="message"
+          rows="3"
+          placeholder="Describe what kind of help you need..."
+          class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
+        ></textarea>
 
-    <!-- 🆘 Help Request Section -->
-<div class="mt-8">
-  <h2 class="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-    Request Help
-  </h2>
+        <button
+          type="submit"
+          [disabled]="submitting"
+          class="w-full bg-green-700 text-white font-semibold py-2 rounded-md hover:bg-green-800 transition"
+        >
+          {{ submitting ? 'Sending...' : 'Send Help Request' }}
+        </button>
 
-  <form
-    [formGroup]="helpForm"
-    (ngSubmit)="submitHelpRequest()"
-    class="space-y-4 bg-white border border-gray-200 p-4 rounded-lg shadow-sm"
-  >
-    <textarea
-      formControlName="message"
-      rows="3"
-      placeholder="Describe what kind of help you need..."
-      class="w-full border rounded-md px-3 py-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
-    ></textarea>
+        <p
+          *ngIf="message"
+          class="text-center text-sm mt-2 font-medium"
+          [class.text-green-600]="message.includes('success')"
+          [class.text-red-600]="!message.includes('success')"
+        >
+          {{ message }}
+        </p>
+      </form>
 
-    <button
-      type="submit"
-      [disabled]="submitting"
-      class="w-full bg-green-700 text-white font-semibold py-2 rounded-md hover:bg-green-800 transition"
-    >
-      {{ submitting ? 'Sending...' : 'Send Help Request' }}
-    </button>
-
-    <p *ngIf="message" class="text-center text-sm mt-2 font-medium"
-      [class.text-green-600]="message.includes('success')"
-      [class.text-red-600]="!message.includes('success')"
-    >
-      {{ message }}
-    </p>
-  </form>
-
-  <!-- Existing Help Requests -->
-  <div *ngIf="helpRequests?.length" class="mt-6">
-    <h3 class="text-md font-semibold text-gray-800 mb-2">Active Help Requests</h3>
-    <div
-      *ngFor="let req of helpRequests"
-      class="border border-gray-200 bg-gray-50 rounded-lg p-3 mb-2"
-    >
-      <p class="text-gray-700 text-sm">{{ req.message }}</p>
-      <p class="text-xs text-gray-400 mt-1">
-        {{ req.createdAt | date: 'short' }}
-      </p>
+      <div *ngIf="helpRequests?.length" class="mt-6">
+        <h3 class="text-md font-semibold text-gray-800 mb-2">
+          Active Help Requests
+        </h3>
+        <div
+          *ngFor="let req of helpRequests"
+          class="border border-gray-200 bg-gray-50 rounded-lg p-3 mb-2"
+        >
+          <p class="text-gray-700 text-sm">{{ req.message }}</p>
+          <p class="text-xs text-gray-400 mt-1">
+            {{ req.createdAt | date: 'short' }}
+          </p>
+        </div>
+      </div>
     </div>
+
+    <!-- 🚑 Responder Treatment Controls -->
+    <div class="mt-10 bg-white border border-gray-200 rounded-lg shadow-sm p-4 space-y-3">
+      <h2 class="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+        Treatment Actions
+      </h2>
+
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button
+          *ngIf="!treatmentStarted"
+          (click)="markAsArrived()"
+          class="flex-1 bg-blue-700 text-white font-semibold py-2 rounded-md hover:bg-blue-800 transition"
+        >
+          🚑 Mark as Arrived
+        </button>
+
+        <button
+          *ngIf="treatmentStarted && !treatmentCompleted"
+          (click)="markAsCompleted()"
+          class="flex-1 bg-green-700 text-white font-semibold py-2 rounded-md hover:bg-green-800 transition"
+        >
+          ✅ Treatment Completed
+        </button>
+      </div>
+
+      <textarea
+        *ngIf="treatmentStarted && !treatmentCompleted"
+        [(ngModel)]="treatmentNotes"
+        placeholder="Add any notes about your treatment..."
+        rows="3"
+        class="w-full border rounded-md px-3 py-2 mt-2 focus:ring-2 focus:ring-green-600 focus:outline-none"
+      ></textarea>
+
+      <div *ngIf="treatmentStarted && !treatmentCompleted" class="text-center mt-2">
+        <button
+          (click)="openWorkflowModal()"
+          class="bg-purple-700 hover:bg-purple-800 text-white px-5 py-2 rounded-md font-semibold shadow"
+        >
+          🩺 Start Treatment Tasks
+        </button>
+      </div>
+
+      <div *ngIf="treatmentCompleted" class="text-green-600 text-sm mt-2">
+        ✅ Treatment completed at {{ treatmentEndTime | date: 'shortTime' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- 🧭 Workflow Modal -->
+  <div
+    *ngIf="showWorkflowModal"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  >
+    <div
+      class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 relative"
+    >
+      <button
+        (click)="closeWorkflowModal()"
+        class="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+      >
+        ✖
+      </button>
+
+      <!-- Loader -->
+      <div *ngIf="loadingWorkflow" class="text-center py-8 text-gray-500">
+        Loading workflow...
+      </div>
+
+      <!-- Task List -->
+      <div *ngIf="!loadingWorkflow && workflowData && !selectedTask">
+        <h2 class="text-xl font-semibold text-gray-800 mb-3">
+          {{ workflowData.workflow.workflow_name }}
+        </h2>
+        <p class="text-sm text-gray-600 mb-4">
+          {{ workflowData.workflow.workflow_description }}
+        </p>
+
+        <div
+          *ngFor="let t of workflowData.tasks"
+          class="border p-3 rounded-md mb-2 hover:bg-gray-50 cursor-pointer"
+          (click)="selectTask(t)"
+        >
+          <h3 class="font-semibold text-gray-800">
+            {{ t.task.task_name }}
+          </h3>
+          <p class="text-sm text-gray-600">
+            {{ t.task.task_description }}
+          </p>
+        </div>
+      </div>
+
+     <!-- Steps List -->
+<div *ngIf="selectedTask">
+  <button
+    (click)="backToTaskList()"
+    class="text-sm text-blue-600 hover:underline mb-3"
+  >
+    ← Back to Tasks
+  </button>
+
+  <h3 class="text-lg font-semibold text-gray-800 mb-2">
+    {{ selectedTask.task.task_name }}
+  </h3>
+  <p class="text-sm text-gray-600 mb-4">
+    {{ selectedTask.task.task_description }}
+  </p>
+
+  <div
+    *ngFor="let s of selectedTask.steps"
+    (click)="toggleStepCompletion(s)"
+    class="flex items-center gap-3 border p-2 rounded-md mb-2 cursor-pointer transition hover:bg-green-50"
+  >
+    <img
+      [src]="s.icon?.file_path"
+      alt="icon"
+      class="w-10 h-10 rounded-md border object-contain"
+    />
+    <span
+      class="flex-1 text-gray-800 text-sm"
+      [class.line-through]="s.completed"
+    >
+      {{ s.step.step_title }}
+    </span>
+    <span *ngIf="s.completed" class="text-green-600 font-bold">✅</span>
   </div>
 </div>
 
-
-
-
+    </div>
   </div>
-
-
-
-
-
-
 </div>
