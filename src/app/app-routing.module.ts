@@ -9,6 +9,7 @@ import { LoginComponent } from './pages/login/login.component';
 import { ResponderProfileComponent } from './pages/responder-profile/responder-profile.component';
 import { SignupComponent } from './pages/signup/signup.component';
 import { AuthGuard } from './gaurds/auth.guard';
+import { PayoutsComponent } from './pages/payouts/payouts.component';
 
 
 const routes: Routes = [
@@ -30,7 +31,7 @@ const routes: Routes = [
 
   { path: RouteNames.Details,
     component: IncidentDetailComponent },
-
+  { path: 'payouts', component: PayoutsComponent },
   { path: '**', redirectTo: '/login' },
 ];
 

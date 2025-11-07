@@ -30,6 +30,7 @@ import { UnauthGuard } from './gaurds/unauth.guard';
 import { LoginComponent } from './pages/login/login.component';
 import { SignupComponent } from './pages/signup/signup.component';
 import { ResponderProfileComponent } from './pages/responder-profile/responder-profile.component';
+import { PayoutsComponent } from './pages/payouts/payouts.component';
 
 
 
@@ -44,6 +45,7 @@ import { ResponderProfileComponent } from './pages/responder-profile/responder-p
     LoginComponent,
     SignupComponent,
     ResponderProfileComponent,
+    PayoutsComponent,
 DashboardComponent],
   imports: [
     AppRoutingModule,

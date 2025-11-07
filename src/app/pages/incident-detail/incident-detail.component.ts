@@ -7,6 +7,7 @@ import { io, Socket } from 'socket.io-client';
 import { GoogleMap } from '@angular/google-maps';
 import { FormBuilder, Validators } from '@angular/forms';
 import { AuthService, ResponderAuthUser } from 'src/app/services/auth.service';
+import Hls from 'hls.js';
 
 @Component({
   selector: 'app-incident-detail',
@@ -43,6 +44,10 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   zoom = 16;
   markers: any[] = [];
 
+  // Live stream
+  streamCheckInterval: any;
+  streamAvailable = false;
+
   // Help request form
   helpForm = this.fb.group({
     message: ['', [Validators.required, Validators.minLength(5)]],
@@ -75,6 +80,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
       await this.loadHelpRequests(id);
       this.initializeMap();
       this.startHeartbeat();
+      this.periodicallyCheckStream();
     } catch (err) {
       console.error('Error initializing incident detail:', err);
       this.error = 'Unable to load incident details.';
@@ -86,6 +92,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.socket) this.socket.disconnect();
     if (this.intervalId) clearInterval(this.intervalId);
+    if (this.streamCheckInterval) clearInterval(this.streamCheckInterval);
   }
 
   async fetchCurrentLocation() {
@@ -101,6 +108,55 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     this.incident = res;
     const [lng, lat] = this.incident.location.coordinates;
     this.mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+  }
+
+  /** 🎥 Periodically check if stream is available */
+  periodicallyCheckStream() {
+    if (!this.incident?.liveStreamUrl) return;
+
+    const url = this.incident.liveStreamUrl;
+    this.checkStreamAvailability(url);
+
+    // Retry every 5 seconds until available
+    this.streamCheckInterval = setInterval(() => {
+      if (!this.streamAvailable) {
+        this.checkStreamAvailability(url);
+      } else {
+        clearInterval(this.streamCheckInterval);
+      }
+    }, 5000);
+  }
+
+  async checkStreamAvailability(url: string) {
+    try {
+      await this.http.head(url, { responseType: 'text' }).toPromise();
+      console.log('✅ Stream is available, initializing HLS...');
+      this.streamAvailable = true;
+      this.initHlsPlayer(url);
+    } catch {
+      console.log('⏳ Stream not available yet, retrying...');
+    }
+  }
+
+  initHlsPlayer(url: string) {
+    const video = document.getElementById('livePlayer') as HTMLVideoElement;
+    if (!video) return;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({ liveDurationInfinity: true });
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log('🎬 HLS manifest loaded, starting playback');
+        video.play().catch(() => console.warn('Autoplay prevented'));
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari native HLS
+      video.src = url;
+      video.play();
+    } else {
+      console.warn('⚠️ HLS not supported in this browser.');
+    }
   }
 
   async loadHelpRequests(id: string) {
@@ -192,7 +248,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     window.open(photoUrl, '_blank');
   }
 
-  /** Mark arrival and load hardcoded workflow */
+  /** Mark arrival and load workflow */
   async markAsArrived() {
     if (!this.currentResponder || !this.incident) return;
 
@@ -228,8 +284,6 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
         workflow_name: 'CAMMRAD Medic Prolonged Casualty Care (PCC)',
         workflow_description:
           'A set of tasks for military medics to deliver prolonged casualty care in austere environments.',
-        cover_img:
-          'http://scribar.net/SCRIBAR_FILES/image_2024-08-21220330734.png',
       },
       tasks: [
         {
@@ -240,32 +294,16 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
               'Perform the needle decompression procedure step-by-step.',
           },
           steps: [
-            {
-              step: { step_id: 1304, step_title: 'Clean site with antimicrobial solution.' },
-              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-2202543993.png' },
-            },
-            {
-              step: { step_id: 1314, step_title: 'Insert a 14 gauge needle at a 90° angle until a hiss of air is heard.' },
-              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-22025451596.png' },
-            },
-            {
-              step: { step_id: 1324, step_title: 'Hold the catheter in place and remove the needle.' },
-              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-22025458501.png' },
-            },
-            {
-              step: { step_id: 1334, step_title: 'Stabilize catheter hub to chest wall with ½ inch gauze tape.' },
-              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-22054105944.png' },
-            },
-            {
-              step: { step_id: 1344, step_title: 'Listen for increased breath sounds or decreased distress.' },
-              icon: { file_path: 'http://scribar.net/SCRIBAR_FILES/icon_2024-08-22025504647.png' },
-            },
+            { step: { step_id: 1304, step_title: 'Clean site with antimicrobial solution.' } },
+            { step: { step_id: 1314, step_title: 'Insert a 14 gauge needle at 90° until hiss of air.' } },
+            { step: { step_id: 1324, step_title: 'Hold catheter in place, remove needle.' } },
+            { step: { step_id: 1334, step_title: 'Stabilize catheter hub with gauze tape.' } },
+            { step: { step_id: 1344, step_title: 'Listen for improved breath sounds.' } },
           ],
         },
       ],
     };
 
-    // initialize completion status for each step
     this.workflowData.tasks.forEach((t: any) =>
       t.steps.forEach((s: any) => (s.completed = false))
     );
@@ -293,10 +331,9 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
   toggleStepCompletion(step: any) {
     step.completed = !step.completed;
-
     const allCompleted = this.selectedTask.steps.every((s: any) => s.completed);
     if (allCompleted) {
-      alert(`✅ All steps in "${this.selectedTask.task.task_name}" are complete!`);
+      alert(`All steps in "${this.selectedTask.task.task_name}" are complete!`);
       this.markAsCompleted();
       this.closeWorkflowModal();
     }
@@ -321,7 +358,7 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
       this.treatmentCompleted = true;
       this.treatmentEndTime = new Date(res.report.endTime);
-      alert('✅ Treatment marked as completed!');
+      alert('Treatment marked as completed!');
     } catch (err: any) {
       console.error('Error completing treatment:', err);
       alert('Failed to complete treatment.');

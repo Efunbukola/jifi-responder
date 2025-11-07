@@ -1,0 +1,73 @@
+<div class="flex flex-col items-center min-h-screen bg-gray-50">
+  
+    <nav class="bg-white flex items-center justify-start border-b border-gray-200 w-full">
+    <div
+      class="flex items-center justify-start p-4 hover:bg-gray-100 rounded-full cursor-pointer"
+      [routerLink]="['/d/profile']"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        height="24px"
+        viewBox="0 -960 960 960"
+        width="24px"
+        fill="currentColor"
+      >
+        <path
+          d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"
+        />
+      </svg>
+    </div>
+
+    <div class="text-base font-bold pr-4 truncate max-w-[80%] text-gray-800">
+      Management Payouts
+    </div>
+  </nav>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="text-gray-500">Loading...</div>
+
+  <!-- If not connected -->
+  <div *ngIf="!loading && !stripeConnected" class="text-center">
+    <p class="text-gray-600 mb-4">
+      You haven’t completed your Stripe setup yet.
+    </p>
+    <button
+      (click)="connectStripe()"
+      class="bg-green-700 text-white font-semibold px-6 py-3 rounded-md hover:bg-green-800 transition"
+    >
+      Set Up Payouts
+    </button>
+
+    <div id="stripe-onboarding-container" class="mt-6"></div>
+  </div>
+
+  <!-- If connected -->
+  <div *ngIf="!loading && stripeConnected" class="w-full max-w-4xl mt-4">
+    <!-- Tabs -->
+    <div class="flex justify-center gap-4 mb-6">
+      <button
+        (click)="showSection('balances')"
+        [class.bg-green-700]="activeSection === 'balances'"
+        [class.text-white]="activeSection === 'balances'"
+        class="border border-green-700 text-green-700 px-4 py-2 rounded-md hover:bg-green-700 hover:text-white transition"
+      >
+        Balances
+      </button>
+
+      <button
+        (click)="showSection('payouts')"
+        [class.bg-green-700]="activeSection === 'payouts'"
+        [class.text-white]="activeSection === 'payouts'"
+        class="border border-green-700 text-green-700 px-4 py-2 rounded-md hover:bg-green-700 hover:text-white transition"
+      >
+        Payouts
+      </button>
+    </div>
+
+    <!-- Stripe Embedded Container -->
+    <div
+      id="stripe-dashboard-container"
+      class="w-full min-h-[700px] border border-gray-200 bg-white rounded-lg shadow-sm p-4"
+    ></div>
+  </div>
+</div>
