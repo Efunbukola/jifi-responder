@@ -108,6 +108,13 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
     this.incident = res;
     const [lng, lat] = this.incident.location.coordinates;
     this.mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+
+    
+    // Always use a static, predictable stream key per incident
+    const staticKey = `incident_${this.incident._id}`;
+    this.incident.liveStreamUrl = `http://localhost:8000/live/${staticKey}/index.m3u8`;
+
+
   }
 
   /** 🎥 Periodically check if stream is available */

@@ -27,7 +27,7 @@
   <div *ngIf="loading" class="text-gray-500">Loading...</div>
 
   <!-- If not connected -->
-  <div *ngIf="!loading && !stripeConnected" class="text-center">
+  <div *ngIf="!stripeConnected" class="text-center">
     <p class="text-gray-600 mb-4">
       You haven’t completed your Stripe setup yet.
     </p>

@@ -27,7 +27,7 @@ export class LoginComponent {
     this.auth.login(email!, password!).subscribe({
       next: () => {
         this.loading = false;
-        this.router.navigate(['/responder-dashboard']);
+        this.router.navigate(['/d/online']);
       },
       error: (err) => {
         this.loading = false;
