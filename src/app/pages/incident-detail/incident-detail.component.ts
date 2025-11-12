@@ -111,8 +111,8 @@ export class IncidentDetailComponent implements OnInit, OnDestroy {
 
     
     // Always use a static, predictable stream key per incident
-    const staticKey = `incident_${this.incident._id}`;
-    this.incident.liveStreamUrl = `http://localhost:8000/live/${staticKey}/index.m3u8`;
+  const staticKey = `incident_${this.incident._id}`;
+  this.incident.liveStreamUrl = `http://localhost:8080/live/${staticKey}.m3u8`;
 
 
   }

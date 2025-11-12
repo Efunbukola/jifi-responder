@@ -10,8 +10,11 @@ export class AuthInterceptor implements HttpInterceptor {
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     const token = this.authService.token;
 
-    // kip authorization for Cloudinary
-    if (req.url.includes('https://api.cloudinary.com')) {
+     // Skip adding Authorization header for external/public URLs
+    if (
+      req.url.includes('https://api.cloudinary.com') ||
+      req.url.includes('http://localhost:8080/live')
+    ) {
       return next.handle(req);
     }
 
