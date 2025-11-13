@@ -31,6 +31,7 @@ import { LoginComponent } from './pages/login/login.component';
 import { SignupComponent } from './pages/signup/signup.component';
 import { ResponderProfileComponent } from './pages/responder-profile/responder-profile.component';
 import { PayoutsComponent } from './pages/payouts/payouts.component';
+import { ResetPasswordComponent } from './pages/reset-password/reset-password.component';
 
 
 
@@ -46,6 +47,7 @@ import { PayoutsComponent } from './pages/payouts/payouts.component';
     SignupComponent,
     ResponderProfileComponent,
     PayoutsComponent,
+    ResetPasswordComponent,
 DashboardComponent],
   imports: [
     AppRoutingModule,

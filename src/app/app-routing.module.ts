@@ -10,6 +10,7 @@ import { ResponderProfileComponent } from './pages/responder-profile/responder-p
 import { SignupComponent } from './pages/signup/signup.component';
 import { AuthGuard } from './gaurds/auth.guard';
 import { PayoutsComponent } from './pages/payouts/payouts.component';
+import { ResetPasswordComponent } from './pages/reset-password/reset-password.component';
 
 
 const routes: Routes = [
@@ -32,6 +33,7 @@ const routes: Routes = [
   { path: RouteNames.Details,
     component: IncidentDetailComponent },
   { path: 'payouts', component: PayoutsComponent },
+  { path: 'reset-password', component: ResetPasswordComponent, canActivate: [UnauthGuard] },
   { path: '**', redirectTo: '/login' },
 ];
 
