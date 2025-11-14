@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
 import {
   FormBuilder,
@@ -7,7 +8,9 @@ import {
   FormArray,
 } from '@angular/forms';
 import { Router } from '@angular/router';
+import { get } from 'http';
 import { AuthService } from 'src/app/services/auth.service';
+import { environment } from 'src/environments/environment';
 
 @Component({
   selector: 'app-signup',
@@ -19,12 +22,24 @@ export class SignupComponent {
   error = '';
   showPassword = false;
   showConfirmPassword = false;
+  availableSkills: any[] = [];
+
 
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
-    private router: Router
-  ) {}
+    private router: Router,
+      private http: HttpClient
+
+  ) {
+    
+    this.http.get(`${environment.api_url}api/skills`)
+    .subscribe((skills: any) => {
+      this.availableSkills = skills;
+    });
+  }
+
+  
 
   /** Reactive form setup */
   form = this.fb.group(
@@ -36,12 +51,13 @@ export class SignupComponent {
       transportation_method: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirm_password: ['', Validators.required],
-      occupation: [''],
-      company: [''],
-      education_level: [''],
-      city: [''],
-      state: [''],
-      zip_code: [''],
+      occupation: ['', Validators.required],
+      company: ['', Validators.required],
+      education_level: ['', Validators.required],
+      certifications: this.fb.array([]),
+      city: ['', Validators.required],
+      state: ['', Validators.required],
+      zip_code: ['', Validators.required],
       secret_question: ['', Validators.required],
       secret_answer: ['', Validators.required],
 
@@ -110,4 +126,20 @@ export class SignupComponent {
       this.form.get('confirm_password')?.touched!
     );
   }
+
+
+    get certifications(): FormArray {
+    return this.form.get('certifications') as FormArray;
+  }
+
+  addCertification() {
+    this.certifications.push(
+      this.fb.control('', Validators.required)
+    );
+  }
+
+  removeCertification(i: number) {
+    this.certifications.removeAt(i);
+  }
+
 }
